@@ -1,0 +1,189 @@
+Deploying docker 
+
+vamos a hacer un docker , publicando una vm , y depsues en un container registrry 
+
+y vamos a ver mas adelante como hacer pipelines que vayan a container registry y a kubernetes 
+
+y claro este proceso se puede hacer con automation pero priemro es bueno entender como funciona 
+
+ 
+
+Lo primero que vamos a hacer es crear una linux vm e instalar el docker engine en la misma
+
+pasos :
+
+1-Crear la vm de linux y en el selected port elegimos el 80 tambien y todo lo demas en default
+
+2-una vez creada vamos a abrir la vm en putty con la ip address ssh
+
+3-Luego de eso usamos los comandos para intalar: 
+
+sudo apt update
+
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+
+sudo apt update
+
+4-Luego instalamos el docker engine  : sudo apt install docker-ce
+
+5-Luego obtenemos la imagen desde docker hub : sudo docker pull nginx
+
+6-AHora podemos ver las imagenes con el comando : sudo docker images
+
+7-y PARA CORRERLO lo hacemos con : sudo docker run --name sampleapp -p 80:80 -d nginx
+
+AHora basicamente lo que vemos se esta corriendo dentro de un docker container 
+
+Para detenerlo le damos : Sudo docker ps 
+
+y luego sudo docker container stop + las dos priemras digitos del container id 
+
+
+
+*******************
+comandos :
+//Instalar requisitos 
+
+sudo apt update
+
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+
+sudo apt update
+
+//Instalar  docker engine
+
+sudo apt install docker-ce
+
+//Instalar  nginx image de Docker Hub
+
+sudo docker pull nginx
+
+// ver imagenes
+
+sudo docker images
+
+// Correr ngix
+
+sudo docker run --name sampleapp -p 80:80 -d nginx
+
+
+//
+
+*************************
+
+Ahora vamos a ver como subir una dotnet app 
+
+Para este lab se usa el proyecto en la carpeta de pipelines llamado docker-app
+
+Lo primero que vamos  ahcaer es publicar la app de una forma manual 
+Pasos: 
+
+1-ahora vamos a abrir en cmd la ruta de nuestro proyecto
+
+2-Hacemos un dir 
+
+3-Hacemos dotnet publish
+
+lo que hace es hacer una build y publish de todo  y ahora en el publish folder tenemos nuestra app 
+
+4-Y ponemos la direccion hasta llegar al publish y le damos dir ejemplo cd docker-app\bin\Debug\netcoreapp3.1\publish\
+
+5-AHora lo que vammos a hacer es publicar ese folder en nuestra vm 
+
+6-Abrimos winSCP tool y nos logueamos , y ya con esto estamos dentro de la vm 
+
+7-Y buscamos nuestro folder y copiamos el publish 
+
+8-Antes de poner el docker file hay que recordar que hay que cambiar el ENTRYPOINT ["dotnet", "docker-app.dll"] dependiendo 
+del nombre del proyecto 
+
+BASICAMENTE EL DOCKER FILE SON UNA SERIE DE COMANDOS PARA ESPECIFICAR QUE Y COMO VAMOS A SUBIR TODO
+
+cuando vayamos a subir desde pipelines , lo vamos a hacer de una manera similar pero distinta luego la vamos a ver 
+
+9-copiamos el docker file a nuestra vm 
+
+10- Nos vamos al publisch flder cd publish 
+
+y corremos los siguientes comandos :
+
+Primero corremos sudo docker build -t dotnetapp .
+
+Luego lo corremos sudo docker run -d -p 80:80 dotnetapp
+
+
+dotnet publish
+
+// This is for building your docker image
+
+sudo docker build -t dotnetapp .
+
+// This is for running your custom image as a container
+
+sudo docker run -d -p 80:80 dotnetapp
+
+
+
+**************
+Azure container registry
+
+Priemro vamos a hacer sudo docker images 
+
+para ver las imagenes que tenemos  
+
+supongamos que queremos compartir esto a un grupo del trabajo la primera opcion es por docker hub pero queda publico , y la otra opcion es por azure 
+container registry 
+Pasos:
+
+1-lo primero que hacemo es crear un azure container registry
+
+luego seguimos los comandos : 
+// Install the Azure command line interface
+
+curl -sL https://packages.microsoft.com/keys/microsoft.asc | \
+ gpg --dearmor | \
+sudo tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg > /dev/null
+
+
+
+AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+sudo tee /etc/apt/sources.list.d/azure-cli.list
+
+sudo apt-get update
+
+sudo apt-get install azure-cli
+
+// Login into your Azure account via the Azure command line interface
+
+sudo az login
+
+// Login into your Azure container registry
+
+sudo az acr login --name demoalexreg
+
+// Tag your image
+
+sudo docker tag dotnetapp demoalexreg.azurecr.io/dotnetapp
+
+// Then push the image onto Azure container registry
+
+sudo docker push demoalexreg.azurecr.io/dotnetapp
+
+
+**************
+Container instances 
+
+Ya vimos como crear un container registry ahorqa vamos a ver el instance 
+
+ahora vamos a crear una intancia y le hacemos referencia al registry que creamos 
+
+
